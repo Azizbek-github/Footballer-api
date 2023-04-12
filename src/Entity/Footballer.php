@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use App\Repository\FootballerRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -32,6 +34,17 @@ class Footballer
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
     #[ORM\JoinColumn(nullable: false)]
     private ?User $user = null;
+
+    #[ORM\OneToOne(mappedBy: 'capitan', cascade: ['persist', 'remove'])]
+    private ?Team $team = null;
+
+    #[ORM\ManyToMany(targetEntity: Team::class, mappedBy: 'footballer')]
+    private Collection $teams;
+
+    public function __construct()
+    {
+        $this->teams = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -94,6 +107,55 @@ class Footballer
     public function setUser(User $user): self
     {
         $this->user = $user;
+
+        return $this;
+    }
+
+    public function getTeam(): ?Team
+    {
+        return $this->team;
+    }
+
+    public function setTeam(?Team $team): self
+    {
+        // unset the owning side of the relation if necessary
+        if ($team === null && $this->team !== null) {
+            $this->team->setCapitan(null);
+        }
+
+        // set the owning side of the relation if necessary
+        if ($team !== null && $team->getCapitan() !== $this) {
+            $team->setCapitan($this);
+        }
+
+        $this->team = $team;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Team>
+     */
+    public function getTeams(): Collection
+    {
+        return $this->teams;
+    }
+
+    public function addTeam(Team $team): self
+    {
+        if (!$this->teams->contains($team)) {
+            $this->teams->add($team);
+            $team->addFootballer($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTeam(Team $team): self
+    {
+        if ($this->teams->removeElement($team)) {
+            $team->removeFootballer($this);
+        }
 
         return $this;
     }
